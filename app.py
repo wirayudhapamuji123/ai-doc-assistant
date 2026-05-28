@@ -3,7 +3,7 @@ from pypdf import PdfReader
 import requests
 
 st.set_page_config(page_title="AI Doc-Assistant Pro", layout="wide")
-st.title("📄 AI Doc-Assistant Pro (100% Valid Version)")
+st.title("📄 AI Doc-Assistant Pro ")
 
 api_key = st.sidebar.text_input("Masukkan Google Gemini API Key:", type="password")
 uploaded_file = st.file_uploader("Pilih dan unggah file PDF Anda", type=["pdf"])
@@ -80,8 +80,13 @@ if uploaded_file and api_key and model_pilihan:
         with kolom_kanan:
             st.subheader("💬 Tanya Jawab")
             user_question = st.text_input("Tanyakan sesuatu tentang dokumen ini:")
+            
+            # INI TOMBOL ENTER / KIRIM KHUSUS UNTUK PENGGUNA HP
             if st.button("Kirim"):
                 if user_question:
                     with st.spinner("AI sedang mencari jawaban..."):
+                        prompt_tanya = f"Berdasarkan dokumen berikut, jawablah pertanyaan user.\n\nDokumen:\n{konteks}\n\nPertanyaan: {user_question}"
+                        jawaban = panggil_gemini_api(model_pilihan, prompt_tanya, api_key)
+                        st.write(jawaban)
                         jawaban = panggil_gemini_api(model_pilihan, f"Dokumen:\n{konteks}\n\nPertanyaan: {user_question}", api_key)
                         st.write(jawaban)
