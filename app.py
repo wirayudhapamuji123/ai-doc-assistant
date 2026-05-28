@@ -55,29 +55,33 @@ if api_key:
 else:
     st.sidebar.info("Masukkan API Key terlebih dahulu.")
 
-# 3. Proses Dokumen PDF dengan Memori Permanen (Sangat Stabil di HP)
+# 3. Proses Dokumen PDF Menggunakan Pemicu Form (Anti Hilang di HP)
 if uploaded_file and api_key and model_pilihan:
     
-    # Tombol konfirmasi upload khusus pengguna HP
-    tombol_proses = st.button("🚀 Proses Dokumen PDF Anda")
-    
-    # Jika tombol utama ditekan, kunci data PDF ke dalam memori aplikasi
-    if tombol_proses:
-        try:
-            reader = PdfReader(uploaded_file)
-            teks_ekstrak = "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])
-            
-            if teks_ekstrak:
-                st.session_state['konteks_teks'] = teks_ekstrak[:8000]
-                st.session_state['pdf_diproses'] = True
-            else:
-                st.error("Dokumen PDF kosong atau tidak mengandung teks yang bisa dibaca.")
+    # Gunakan fitur form agar data PDF dikunci penuh saat tombol ditekan
+    with st.form(key='form_pdf'):
+        st.write("Silakan konfirmasi file PDF Anda di bawah ini:")
+        tombol_proses = st.form_submit_button(label='🚀 Proses Dokumen PDF Anda')
+        
+        if tombol_proses:
+            try:
+                reader = PdfReader(uploaded_file)
+                teks_ekstrak = ""
+                for page in reader.pages:
+                    t = page.extract_text()
+                    if t:
+                        teks_ekstrak += t + "\n"
+                
+                if teks_ekstrak.strip():
+                    st.session_state['konteks_teks'] = teks_ekstrak[:8000]
+                    st.session_state['pdf_diproses'] = True
+                else:
+                    st.session_state['pdf_diproses'] = False
+            except Exception as e:
+                st.error(f"Gagal membaca PDF: {e}")
                 st.session_state['pdf_diproses'] = False
-        except Exception as e:
-            st.error(f"Gagal membaca PDF: {e}")
-            st.session_state['pdf_diproses'] = False
 
-    # Jika memori mendeteksi PDF aman, kunci tampilan agar tidak hilang saat tombol lain diklik
+    # Tampilkan menu Ringkasan & Tanya Jawab jika data sudah masuk ke memori
     if st.session_state.get('pdf_diproses', False):
         st.success("Dokumen berhasil dimuat dan dikunci di memori!")
         konteks = st.session_state['konteks_teks']
@@ -86,7 +90,6 @@ if uploaded_file and api_key and model_pilihan:
         
         with kolom_kiri:
             st.subheader("📊 Ringkasan Otomatis")
-            # Gunakan key unik agar tidak bentrok di server Streamlit
             if st.button("Buat Ringkasan", key="btn_ringkas"):
                 with st.spinner("AI sedang merangkum..."):
                     hasil = panggil_gemini_api(model_pilihan, f"Ringkas dokumen ini dalam Bahasa Indonesia:\n\n{konteks}", api_key)
