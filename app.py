@@ -55,40 +55,47 @@ if api_key:
 else:
     st.sidebar.info("Masukkan API Key terlebih dahulu.")
 
-# 3. Proses Dokumen PDF dengan Memori Session State (Anti-Macet di HP)
+# 3. Proses Dokumen PDF dengan Memori Permanen (Sangat Stabil di HP)
 if uploaded_file and api_key and model_pilihan:
     
-    # Membuat tombol konfirmasi upload untuk HP
+    # Tombol konfirmasi upload khusus pengguna HP
     tombol_proses = st.button("🚀 Proses Dokumen PDF Anda")
     
-    # Jika tombol proses diklik, simpan statusnya ke dalam memori aplikasi
+    # Jika tombol utama ditekan, kunci data PDF ke dalam memori aplikasi
     if tombol_proses:
-        st.session_state['pdf_diproses'] = True
         try:
             reader = PdfReader(uploaded_file)
-            st.session_state['konteks_teks'] = "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])[:8000]
+            teks_ekstrak = "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])
+            
+            if teks_ekstrak:
+                st.session_state['konteks_teks'] = teks_ekstrak[:8000]
+                st.session_state['pdf_diproses'] = True
+            else:
+                st.error("Dokumen PDF kosong atau tidak mengandung teks yang bisa dibaca.")
+                st.session_state['pdf_diproses'] = False
         except Exception as e:
             st.error(f"Gagal membaca PDF: {e}")
             st.session_state['pdf_diproses'] = False
 
-    # Jika memori mencatat PDF sudah diproses, tampilkan menunya dan biarkan tombol di bawah bisa diklik
+    # Jika memori mendeteksi PDF aman, kunci tampilan agar tidak hilang saat tombol lain diklik
     if st.session_state.get('pdf_diproses', False):
-        st.success("Dokumen berhasil dimuat!")
+        st.success("Dokumen berhasil dimuat dan dikunci di memori!")
         konteks = st.session_state['konteks_teks']
         
         kolom_kiri, kolom_kanan = st.columns(2)
         
         with kolom_kiri:
             st.subheader("📊 Ringkasan Otomatis")
-            if st.button("Buat Ringkasan"):
+            # Gunakan key unik agar tidak bentrok di server Streamlit
+            if st.button("Buat Ringkasan", key="btn_ringkas"):
                 with st.spinner("AI sedang merangkum..."):
                     hasil = panggil_gemini_api(model_pilihan, f"Ringkas dokumen ini dalam Bahasa Indonesia:\n\n{konteks}", api_key)
                     st.write(hasil)
                     
         with kolom_kanan:
             st.subheader("💬 Tanya Jawab")
-            user_question = st.text_input("Tanyakan sesuatu tentang dokumen ini:")
-            if st.button("Kirim"):
+            user_question = st.text_input("Tanyakan sesuatu tentang dokumen ini:", key="input_tanya")
+            if st.button("Kirim", key="btn_kirim"):
                 if user_question:
                     with st.spinner("AI sedang mencari jawaban..."):
                         prompt_tanya = f"Berdasarkan dokumen berikut, jawablah pertanyaan user.\n\nDokumen:\n{konteks}\n\nPertanyaan: {user_question}"
