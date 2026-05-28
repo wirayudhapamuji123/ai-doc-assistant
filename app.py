@@ -55,38 +55,39 @@ if api_key:
 else:
     st.sidebar.info("Masukkan API Key terlebih dahulu.")
 
-# 3. Proses Dokumen PDF
+# 3. Proses Dokumen PDF dengan Tombol Konfirmasi (Sangat Ramah HP)
 if uploaded_file and api_key and model_pilihan:
-    try:
-        reader = PdfReader(uploaded_file)
-        teks_dokumen = "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])
-    except Exception as e:
-        st.error(f"Gagal membaca PDF: {e}")
-        teks_dokumen = ""
+    
+    # MEMBUAT TOMBOL KONFIRMASI SETELAH UPLOAD PDF DI HP
+    tombol_proses = st.button("🚀 Proses Dokumen PDF Anda")
+    
+    # Aplikasi hanya akan berjalan jika tombol di atas diklik
+    if tombol_proses:
+        try:
+            reader = PdfReader(uploaded_file)
+            teks_dokumen = "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])
+        except Exception as e:
+            st.error(f"Gagal membaca PDF: {e}")
+            teks_dokumen = ""
 
-    if teks_dokumen:
-        st.success("Dokumen berhasil dimuat!")
-        konteks = teks_dokumen[:8000]
-        
-        kolom_kiri, kolom_kanan = st.columns(2)
-        
-        with kolom_kiri:
-            st.subheader("📊 Ringkasan Otomatis")
-            if st.button("Buat Ringkasan"):
-                with st.spinner("AI sedang merangkum..."):
-                    hasil = panggil_gemini_api(model_pilihan, f"Ringkas dokumen ini dalam Bahasa Indonesia:\n\n{konteks}", api_key)
-                    st.write(hasil)
-                    
-        with kolom_kanan:
-            st.subheader("💬 Tanya Jawab")
-            user_question = st.text_input("Tanyakan sesuatu tentang dokumen ini:")
+        if teks_dokumen:
+            st.success("Dokumen berhasil dimuat!")
+            konteks = teks_dokumen[:8000]
             
-            # INI TOMBOL ENTER / KIRIM KHUSUS UNTUK PENGGUNA HP
-            if st.button("Kirim"):
-                if user_question:
-                    with st.spinner("AI sedang mencari jawaban..."):
-                        prompt_tanya = f"Berdasarkan dokumen berikut, jawablah pertanyaan user.\n\nDokumen:\n{konteks}\n\nPertanyaan: {user_question}"
-                        jawaban = panggil_gemini_api(model_pilihan, prompt_tanya, api_key)
-                        st.write(jawaban)
-                        jawaban = panggil_gemini_api(model_pilihan, f"Dokumen:\n{konteks}\n\nPertanyaan: {user_question}", api_key)
-                        st.write(jawaban)
+            kolom_kiri, kolom_kanan = st.columns(2)
+            
+            with kolom_kiri:
+                st.subheader("📊 Ringkasan Otomatis")
+                if st.button("Buat Ringkasan"):
+                    with st.spinner("AI sedang merangkum..."):
+                        hasil = panggil_gemini_api(model_pilihan, f"Ringkas dokumen ini dalam Bahasa Indonesia:\n\n{konteks}", api_key)
+                        st.write(hasil)
+                        
+            with kolom_kanan:
+                st.subheader("💬 Tanya Jawab")
+                user_question = st.text_input("Tanyakan sesuatu tentang dokumen ini:")
+                if st.button("Kirim"):
+                    if user_question:
+                        with st.spinner("AI sedang mencari jawaban..."):
+                            jawaban = panggil_gemini_api(model_pilihan, f"Dokumen:\n{konteks}\n\nPertanyaan: {user_question}", api_key)
+                            st.write(jawaban)
