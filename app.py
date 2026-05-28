@@ -55,52 +55,47 @@ if api_key:
 else:
     st.sidebar.info("Masukkan API Key terlebih dahulu.")
 
-# 3. Proses Dokumen PDF Menggunakan Pemicu Form (Anti Hilang di HP)
+# 3. Alur Proses Simpel & Stabil (Khusus Pengguna HP)
 if uploaded_file and api_key and model_pilihan:
     
-    # Gunakan fitur form agar data PDF dikunci penuh saat tombol ditekan
-    with st.form(key='form_pdf'):
-        st.write("Silakan konfirmasi file PDF Anda di bawah ini:")
-        tombol_proses = st.form_submit_button(label='🚀 Proses Dokumen PDF Anda')
-        
-        if tombol_proses:
-            try:
-                reader = PdfReader(uploaded_file)
-                teks_ekstrak = ""
-                for page in reader.pages:
-                    t = page.extract_text()
-                    if t:
-                        teks_ekstrak += t + "\n"
+    # Cukup satu tombol utama untuk memicu semuanya
+    tombol_mulai = st.button("🚀 Kirim & Proses Dokumen PDF")
+    
+    if tombol_mulai:
+        try:
+            reader = PdfReader(uploaded_file)
+            teks_ekstrak = ""
+            for page in reader.pages:
+                t = page.extract_text()
+                if t:
+                    teks_ekstrak += t + "\n"
+            
+            if teks_ekstrak.strip():
+                # Simpan teks ke memori agar aman
+                st.session_state['konteks_teks'] = teks_ekstrak[:8000]
+                st.session_state['pdf_ready'] = True
                 
-                if teks_ekstrak.strip():
-                    st.session_state['konteks_teks'] = teks_ekstrak[:8000]
-                    st.session_state['pdf_diproses'] = True
-                else:
-                    st.session_state['pdf_diproses'] = False
-            except Exception as e:
-                st.error(f"Gagal membaca PDF: {e}")
-                st.session_state['pdf_diproses'] = False
-
-    # Tampilkan menu Ringkasan & Tanya Jawab jika data sudah masuk ke memori
-    if st.session_state.get('pdf_diproses', False):
-        st.success("Dokumen berhasil dimuat dan dikunci di memori!")
-        konteks = st.session_state['konteks_teks']
-        
-        kolom_kiri, kolom_kanan = st.columns(2)
-        
-        with kolom_kiri:
-            st.subheader("📊 Ringkasan Otomatis")
-            if st.button("Buat Ringkasan", key="btn_ringkas"):
-                with st.spinner("AI sedang merangkum..."):
-                    hasil = panggil_gemini_api(model_pilihan, f"Ringkas dokumen ini dalam Bahasa Indonesia:\n\n{konteks}", api_key)
+                # Langsung buatkan ringkasannya saat tombol diklik
+                st.success("Dokumen berhasil diproses!")
+                with st.spinner("AI sedang merangkum isi dokumen..."):
+                    hasil = panggil_gemini_api(model_pilihan, f"Ringkas dokumen ini dalam Bahasa Indonesia:\n\n{st.session_state['konteks_teks']}", api_key)
+                    st.subheader("📊 Hasil Ringkasan Otomatis")
                     st.write(hasil)
-                    
-        with kolom_kanan:
-            st.subheader("💬 Tanya Jawab")
-            user_question = st.text_input("Tanyakan sesuatu tentang dokumen ini:", key="input_tanya")
-            if st.button("Kirim", key="btn_kirim"):
-                if user_question:
-                    with st.spinner("AI sedang mencari jawaban..."):
-                        prompt_tanya = f"Berdasarkan dokumen berikut, jawablah pertanyaan user.\n\nDokumen:\n{konteks}\n\nPertanyaan: {user_question}"
-                        jawaban = panggil_gemini_api(model_pilihan, prompt_tanya, api_key)
-                        st.write(jawaban)
+            else:
+                st.error("Teks di dalam PDF tidak terbaca.")
+        except Exception as e:
+            st.error(f"Gagal membaca PDF: {e}")
+
+    # Kolom tanya jawab otomatis terbuka di bawahnya setelah PDF sukses terbaca
+    if st.session_state.get('pdf_ready', False):
+        st.write("---")
+        st.subheader("💬 Tanya Jawab Tambahan")
+        user_question = st.text_input("Tanyakan hal lain tentang dokumen ini:", key="input_hp")
+        
+        # Tombol kirim khusus HP agar tidak perlu pencet enter di keyboard
+        if st.button("Kirim Pertanyaan", key="btn_hp"):
+            if user_question:
+                with st.spinner("AI sedang mencari jawaban..."):
+                    prompt_tanya = f"Berdasarkan dokumen berikut, jawablah pertanyaan user.\n\nDokumen:\n{st.session_state['konteks_teks']}\n\nPertanyaan: {user_question}"
+                    jawaban = panggil_gemini_api(model_pilihan, prompt_tanya, api_key)
+                    st.write(jawaban)
